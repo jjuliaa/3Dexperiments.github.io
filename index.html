@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>LiDAR SCAN FUN</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			* {
+				box-sizing: border-box;
+				-moz-box-sizing: border-box;
+			}
+
+			body {
+				background-color: #FFFFFF;
+				color: #444;
+			}
+
+			a {
+				color: #08f;
+			}
+
+			#content {
+				position: absolute;
+				top: 0; width: 100%;
+				z-index: 1;
+				padding: 3em 0 0 0;
+				font-size: 11px;
+				font-variant: small-caps;
+			}
+
+			#c {
+				position: absolute;
+				left: 0;
+				width: 100%;
+				height: 100%;
+			}
+			#textmessage{
+		        position: absolute;
+		        top: 5px; width: 100%;
+		        color: #888;
+				font-family: sans-serif;
+				font-variant: small-caps;
+		        padding-top:15px;
+		        font-size:12px;
+		        font-weight: 100;
+		        text-align:center;
+		    }
+
+			.list-item {
+				display: inline-block;
+				margin: 1em;
+				padding: 1em;
+				box-shadow: 1px 2px 4px 0px rgba(0,0,0,0.25);
+			}
+
+			.list-item > div:nth-child(1) {
+				width: 500px;
+				height: 500px;
+			}
+
+			.list-item > div:nth-child(2) {
+				color: #888;
+				font-family: sans-serif;
+				font-variant: small-caps;
+				font-size: small;
+				width: 200px;
+				margin-top: 0.5em;
+			}
+
+			.load-item > div:nth-child(3) {
+					color: #888;
+					font-family: sans-serif;
+					font-variant: small-caps;
+					font-size: small;
+					width: 200px;
+					margin-top: 0.5em;
+					text-align: right;
+			}
+		</style>
+	</head>
+	<body>
+
+		<canvas id="c"></canvas>
+
+				<div id="content">
+					<div id="textmessage"><p>fwiw loaded scans ( pause for loading, then click + drag )</p></div>
+					<div id="load-item">Loading %</div>
+				</div>
+
+
+		<script type="module">
+
+			import * as THREE from './node_modules/three/build/three.module.js';
+			import { GLTFLoader } from './node_modules/three/examples/jsm/loaders/GLTFLoader.js';
+			import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitControls.js';
+			import { PLYLoader } from './node_modules/three/examples/jsm/loaders/PLYLoader.js';
+
+			var canvas;
+
+			var scenes = [], renderer;
+
+			//to add new object: 1. increase scene count. 2. add file to files array 3. add name tag!
+
+			var scenecount = 4;
+			var files = [scenecount];
+
+			//gltf files
+			var index;
+			var i;
+
+			//load gltfs
+			var loader;
+			var model;
+			//glb animator
+			var mixers = [];
+			var mixer;
+			var clock;
+
+			init();
+			animate();
+
+
+			function init() {
+
+				canvas = document.getElementById( "c" );
+
+				clock = new THREE.Clock();
+				//load gltfs
+				loader = new GLTFLoader();
+
+				//mixer per scene
+				mixers = [new THREE.AnimationMixer(), new THREE.AnimationMixer(), new THREE.AnimationMixer()];
+
+				index = 0;
+				i = 0;
+
+				//order matters for naming tags!
+				files = ['./models/bowl.glb','./models/2021-01-14--15-48-37.gltf','./models/treepath.ply','./models/jules studio subsample.ply'];
+
+				var content = document.getElementById( 'content' );
+
+				for ( var i = 0; i < scenecount; i ++ ) {
+
+					var scene = new THREE.Scene();
+
+					// make a list item
+					var element = document.createElement( 'div' ); //div 0
+					element.className = 'list-item';
+
+					var sceneElement = document.createElement( 'div' ); //div 1
+					element.appendChild( sceneElement );
+
+					var descriptionElement = document.createElement( 'div' ); // div 2
+					descriptionElement.innerText = '3dMeme' + ( i + 1 );
+					if (i ==0)descriptionElement.innerText = ' 3DScanner App Bowls '
+					if (i ==1)descriptionElement.innerText = ' Record3D App Bowls '
+					if (i ==2)descriptionElement.innerText = ' tree path '
+					if (i ==3)descriptionElement.innerText = 'jules studio into mesh '
+					if (i ==4)descriptionElement.innerText = ' jules studio '
+					if (i ==5)descriptionElement.innerText = 'jules studio (subsample) '
+					element.appendChild( descriptionElement );
+
+					//this elemet is the loading info spot in each scene
+					var loadmsg = document.createElement( 'div' ); //div 3
+				  loadmsg.className = 'load-item';
+					//element.appendChild(loadmsg);
+
+					// the element that represents the area we want to render the scene
+					scene.userData.element = sceneElement;
+					content.appendChild( element );
+
+					var camera = new THREE.PerspectiveCamera( 50, 1, 0.01, 1000);
+					camera.position.z = 5;
+					scene.userData.camera = camera;
+
+					//possible to set single scene camera's load position
+					if (i ==1) {
+						camera.position.x = -0.02;
+						camera.position.y = 0.114;
+						camera.position.z = 0.36;
+					}  else {
+					//manually set positions on load
+					camera.position.x = -1.478;
+					camera.position.y = 1.786;
+					camera.position.z = -1.423;
+				}
+
+
+					var controls = new OrbitControls( scene.userData.camera, scene.userData.element );
+					controls.minDistance = 0.1;
+					controls.maxDistance = 30;
+					controls.enablePan = true;
+					controls.enableZoom = true;
+					scene.userData.controls = controls;
+
+					//add glb
+					loadNextFile(scene);
+
+
+					scene.add( new THREE.HemisphereLight( 0xaaaaaa, 0x444444 ) );
+
+					var light = new THREE.DirectionalLight( 0xffffff, 0.5 );
+					light.position.set( 1, 1, 10 );
+					scene.add( light );
+
+					//Add Lights
+				light = new THREE.SpotLight(0xffa95c, 2);
+				light.position.set(-50,50,10);
+				light.castShadow = true;
+				scene.add( light );
+		        light.castShadow = true;
+		        light.shadow.bias = -0.0001;
+		        light.shadow.mapSize.width = 1024*4;
+		        light.shadow.mapSize.height = 1024*4;
+
+		        //Add Lights
+				var hemiLight = new THREE.HemisphereLight(0xfffbee, 0x080820, 4);
+		        scene.add(hemiLight);
+
+		        var light3 = new THREE.SpotLight(0x080820, 5);
+				light3.position.set(1,1,5);
+				light3.castShadow = true;
+				//scene.add( light3 );
+		        light3.castShadow = true;
+		        light3.shadow.bias = -0.0001;
+		        light3.shadow.mapSize.width = 1024*4;
+		        light3.shadow.mapSize.height = 1024*4;
+
+					//add mixers per scene
+					//var mixer = startAnimation( clonedMesh, model.animations, u.animationName );
+					// Save the animation mixer in the list, will need it in the animation loop
+
+					scenes.push( scene );
+				}
+
+
+				renderer = new THREE.WebGLRenderer( { canvas: canvas, antialias: true } );
+				renderer.setClearColor( 0xffffff, 1 );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.physicallyCorrectLights = true;
+
+			}
+
+
+
+
+			function loadNextFile(scene) {
+
+			  if (index > files.length - 1) return;
+				//loading manager
+						var manager = new THREE.LoadingManager();
+						manager.onStart = function ( url, itemsLoaded, itemsTotal ) {
+								//resourcesloaded = false;
+								loadmsg.innerText = "Loading"
+								LogFunction("Loading...") };
+
+						manager.onLoad = function ( ) {
+								console.log( 'Loading complete!');
+								//resourcesloaded = true;
+								removeLog(); };
+
+						manager.onProgress = function ( url, itemsLoaded, itemsTotal ) {
+							 //resourcesloaded = false;
+							 LogFunction("Almost ready.."); };
+
+						manager.onError = function ( url ) {
+							LogFunction("Error loading, try refresh window or use firefox browser")
+							console.log( 'There was an error loading ' + url); };
+
+
+							loadAnyModel(files[index], scene);
+
+					index++;
+
+		}
+
+
+	function loadAnyModel(path, scene) {
+ 			 var strings = path.split('.');
+ 			 var types = ['glb', 'gltf', 'ply'];
+ 			 var result = 0;
+ 			 types.forEach(function (item,index) {
+ 					 if (strings.length > 1) {
+ 							 if (strings[2] == item){ //strings[2] would be anything after the '.'
+									 result = index;
+									 console.log("result", result);
+ 							 }
+ 					 }
+ 			 });
+
+			 switch (result){
+ 					 case -1:
+ 							 alert("file format not supported/ improperly named");
+ 					 case 0:
+ 							 loadGLTF(path, scene);
+ 							 break;
+					 case 1:
+							  loadGLTF(path, scene);
+								break;
+ 					 case 2:
+ 							 loadPLY(path, scene);
+ 							 break;
+ 					 //case 3:
+ 							 //loadSTL(path);
+ 							 //break;
+ 							 //ETC etc etc
+ 			 }
+ 	 }
+
+
+		function loadGLTF(path, scene){
+			    loader.load(path,  ( gltf ) => {
+					        // called when the resource is loaded
+					        model = gltf.scene;
+					        scene.add(model);
+					        mixer = new THREE.AnimationMixer(model);
+					        gltf.animations.forEach((clip) => {
+					        	mixer.clipAction(clip).play();
+					        });
+
+								mixers.push(mixer);
+
+						},
+					    ( xhr ) => {
+					        // called while loading is progressing
+					        console.log( `${( xhr.loaded / xhr.total * 100 )}% loaded` );
+					    },
+					    ( error ) => {
+					        // called when loading has errors
+					        console.error( 'An error happened', error );
+					    },
+					);
+
+
+			    //index++;
+			}
+
+			function loadPLY(path, scene){
+									const PLYloader = new PLYLoader();
+									PLYloader.load( path, function ( geometry ) {
+
+
+									//convert to mesh
+									 geometry.computeVertexNormals();
+									//
+									 const material = new THREE.MeshStandardMaterial( { flatShading: true } );
+									 const mesh = new THREE.Mesh( geometry, material );
+
+									//mesh.position.x = - 0.2;
+									//mesh.position.y = - 0.02;
+									//mesh.position.z = - 0.2;
+									//mesh.scale.multiplyScalar( 0.0006 );
+									//
+								 mesh.castShadow = true;
+								 mesh.receiveShadow = true;
+
+									scene.add( mesh );
+
+								} );
+
+			}
+
+
+			//for loading manager messages
+			function LogFunction(text) {
+								var resultlog = document.getElementById('load-item');
+								const headingElem = document.querySelector( 'load-item' );
+								if(resultlog!== null) {
+									resultlog.innerText = text;
+									}
+								if(headingElem!== null) {
+										headElem.textContent = text;
+									}
+						}
+
+			function removeLog() {
+							var elem = document.getElementById('load-item');
+							const headingElem = document.querySelector( 'load-item' );
+							elem.parentNode.removeChild(elem);
+							headingElem.parentNode.removeChild(headingElem);
+									return false;
+									}
+
+
+			function createNewMixer(model, gltf) {
+
+				var mixer = new THREE.AnimationMixer(gltf.scene);
+
+
+				gltf.animations.forEach((clip) => {
+					        	mixer.clipAction(clip).play();
+					        });
+
+
+				return mixer;
+
+			}
+
+
+
+			function updateSize() {
+
+				var width = canvas.clientWidth;
+				var height = canvas.clientHeight;
+
+				if ( canvas.width !== width || canvas.height !== height ) {
+
+					renderer.setSize( width, height, false );
+
+				}
+
+			}
+
+			function animate() {
+
+				render();
+				//update mixers
+
+				var delta = clock.getDelta();
+				if(mixers.length > 1){
+    			for ( let i = 0, l = mixers.length; i < l; i ++ ) {
+
+    			mixers[i].update(delta);
+
+					}
+				}
+
+				requestAnimationFrame( animate );
+
+			}
+
+			function render() {
+
+				updateSize();
+
+				canvas.style.transform = `translateY(${window.scrollY}px)`;
+
+				renderer.setClearColor( 0xFFFFFF);
+				renderer.setScissorTest( false );
+				renderer.clear();
+
+				//renderer.setClearColor( 0xe0e0e0 );//gray?
+				renderer.setClearColor( 0xFFFFFF );
+				renderer.setScissorTest( true );
+
+				scenes.forEach( function ( scene ) {
+
+					// so something moves
+					scene.children[ 0 ].rotation.y = Date.now() * 0.001;
+
+					// get the element that is a place holder for where we want to
+					// draw the scene
+					var element = scene.userData.element;
+
+					// get its position relative to the page's viewport
+					var rect = element.getBoundingClientRect();
+
+					// check if it's offscreen. If so skip it
+					if ( rect.bottom < 0 || rect.top > renderer.domElement.clientHeight ||
+						 rect.right < 0 || rect.left > renderer.domElement.clientWidth ) {
+
+						return; // it's off screen
+
+					}
+
+					// set the viewport
+					var width = rect.right - rect.left;
+					var height = rect.bottom - rect.top;
+					var left = rect.left;
+					var bottom = renderer.domElement.clientHeight - rect.bottom;
+
+					renderer.setViewport( left, bottom, width, height );
+					renderer.setScissor( left, bottom, width, height );
+
+					var camera = scene.userData.camera;
+
+					//view camera position
+				 //console.log("cam ", camera.position);
+
+					camera.aspect = width / height; // not changing in this example
+					camera.updateProjectionMatrix();//
+
+					scene.userData.controls.update();//may be off
+
+					renderer.render( scene, camera );
+
+				} );
+
+			}
+
+
+		</script>
+
+	</body>
+</html>
