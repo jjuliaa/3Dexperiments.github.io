@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>LiDAR SCAN FUN</title>
+		<title>CRYSTAL SCAN FUN</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 		<style>
@@ -83,7 +83,7 @@
 		<canvas id="c"></canvas>
 
 				<div id="content">
-					<div id="textmessage"><p>fwiw loaded scans ( pause for loading, then click + drag )</p></div>
+					<div id="textmessage"><p>The Crystal Quartz Place</p></div>
 					<div id="load-item">Loading %</div>
 				</div>
 
@@ -101,7 +101,7 @@
 
 			//to add new object: 1. increase scene count. 2. add file to files array 3. add name tag!
 
-			var scenecount = 4;
+			var scenecount = 1;
 			var files = [scenecount];
 
 			//gltf files
@@ -135,7 +135,7 @@
 				i = 0;
 
 				//order matters for naming tags!
-				files = ['./models/bowl.glb','./models/2021-01-14--15-48-37.gltf','./models/treepath.ply','./models/jules studio subsample.ply'];
+				files = ['models/quartz_Scan1.glb', 'models/Quartz.jpg' ];
 
 				var content = document.getElementById( 'content' );
 
@@ -152,8 +152,8 @@
 
 					var descriptionElement = document.createElement( 'div' ); // div 2
 					descriptionElement.innerText = '3dMeme' + ( i + 1 );
-					if (i ==0)descriptionElement.innerText = ' 3DScanner App Bowls '
-					if (i ==1)descriptionElement.innerText = ' Record3D App Bowls '
+					if (i ==0)descriptionElement.innerText = ' Quartz, Namibia. $1200	 Purchase our Etsy Store Link There'
+					if (i ==1)descriptionElement.innerText = ' Image of Quartz, Namibia '
 					if (i ==2)descriptionElement.innerText = ' tree path '
 					if (i ==3)descriptionElement.innerText = 'jules studio into mesh '
 					if (i ==4)descriptionElement.innerText = ' jules studio '
@@ -174,10 +174,10 @@
 					scene.userData.camera = camera;
 
 					//possible to set single scene camera's load position
-					if (i ==1) {
-						camera.position.x = -0.02;
-						camera.position.y = 0.114;
-						camera.position.z = 0.36;
+					if (i == 0) {
+						camera.position.x = -9.55;
+						camera.position.y = 4.12;
+						camera.position.z = -3.10;
 					}  else {
 					//manually set positions on load
 					camera.position.x = -1.478;
@@ -185,6 +185,10 @@
 					camera.position.z = -1.423;
 				}
 
+				//hard coding the image for now
+					if (i == 1) {
+						loadImage(files[1], scene);
+					}
 
 					var controls = new OrbitControls( scene.userData.camera, scene.userData.element );
 					controls.minDistance = 0.1;
@@ -199,16 +203,19 @@
 
 					scene.add( new THREE.HemisphereLight( 0xaaaaaa, 0x444444 ) );
 
-					var light = new THREE.DirectionalLight( 0xffffff, 0.5 );
-					light.position.set( 1, 1, 10 );
+					var light = new THREE.DirectionalLight( 0xffffff , 3 );
+					light.position.set( -10, 5, -3 );
 					scene.add( light );
+					var backlight = new THREE.DirectionalLight( 0xffffff, 3 );
+					light.position.set( 10, -5, 3 );
+					scene.add( backlight );
 
 					//Add Lights
 				light = new THREE.SpotLight(0xffa95c, 2);
 				light.position.set(-50,50,10);
 				light.castShadow = true;
 				scene.add( light );
-		        light.castShadow = true;
+		        light.castShadow = false;
 		        light.shadow.bias = -0.0001;
 		        light.shadow.mapSize.width = 1024*4;
 		        light.shadow.mapSize.height = 1024*4;
@@ -217,11 +224,11 @@
 				var hemiLight = new THREE.HemisphereLight(0xfffbee, 0x080820, 4);
 		        scene.add(hemiLight);
 
-		        var light3 = new THREE.SpotLight(0x080820, 5);
-				light3.position.set(1,1,5);
+		        var light3 = new THREE.SpotLight(0x080820, 1);
+				light3.position.set(10,-9,5);
 				light3.castShadow = true;
 				//scene.add( light3 );
-		        light3.castShadow = true;
+		        light3.castShadow = false;
 		        light3.shadow.bias = -0.0001;
 		        light3.shadow.mapSize.width = 1024*4;
 		        light3.shadow.mapSize.height = 1024*4;
@@ -276,19 +283,23 @@
 
 
 	function loadAnyModel(path, scene) {
+
  			 var strings = path.split('.');
- 			 var types = ['glb', 'gltf', 'ply'];
+ 			 var types = ['glb', 'gltf', 'ply', '.jpg'];
  			 var result = 0;
  			 types.forEach(function (item,index) {
  					 if (strings.length > 1) {
- 							 if (strings[2] == item){ //strings[2] would be anything after the '.'
+						 //var endings = strings.toString().split(",");
+						 	//console.log(strings[1]);
+ 							 if (strings[1] == item){ //strings[2] would be anything after the '.'
+								 console.log("item", item);
 									 result = index;
-									 console.log("result", result);
+									 //console.log("RESULT", result);
  							 }
  					 }
  			 });
 
-			 switch (result){
+			 switch(result){
  					 case -1:
  							 alert("file format not supported/ improperly named");
  					 case 0:
@@ -300,9 +311,9 @@
  					 case 2:
  							 loadPLY(path, scene);
  							 break;
- 					 //case 3:
- 							 //loadSTL(path);
- 							 //break;
+ 					 case 3:
+ 							 loadImage(path, scene);
+ 							 break;
  							 //ETC etc etc
  			 }
  	 }
@@ -357,6 +368,22 @@
 									scene.add( mesh );
 
 								} );
+
+			}
+
+			function loadImage(path, scene) {
+
+				console.log("yes");
+				var img = new THREE.MeshBasicMaterial({
+				        map:THREE.ImageUtils.loadTexture(path)
+				    });
+				    //img.map.needsUpdate = true; //ADDED
+
+						// plane
+						var plane = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), img);
+						plane.overdraw = true;
+						scene.add(plane);
+
 
 			}
 
